@@ -159,18 +159,24 @@ export const getAuthBaseUrl = (): string => {
 };
 
 export const getOAuthClientId = (): string => {
-    const client_id = process.env.OAUTH_CLIENT_ID;
-    if (!client_id)
-        throw new Error(
-            'OAUTH_CLIENT_ID is not set. Add it to your .env file for local dev or GitHub Environment secrets for CI.'
-        );
-    return client_id;
+    // Standard Deriv OAuth uses App ID as client_id in the authorize URL.
+    // The previous implementation relied on a PKCE OAUTH_CLIENT_ID env var which is not always available.
+    return String(getAppId());
+};
+
+export const getOAuthUrl = (): string => {
+    const app_id = getAppId();
+    // Use the standard Deriv OAuth URL as provided in the instructions
+    return `https://oauth.deriv.com/oauth2/authorize?app_id=${app_id}`;
 };
 
 /**
  * Gets the OAuth2 redirect URI for the current environment
  */
 export const getOAuthRedirectUri = (): string => {
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        return `${window.location.protocol}//${window.location.host}`;
+    }
     const auth = config_data.auth as Record<string, unknown>;
     return isProduction()
         ? ((auth.oauth_redirect_uri_production as string) ?? '')

@@ -9,7 +9,7 @@ import { StoreProvider } from '@deriv/stores';
 import { BreakpointProvider } from '@deriv-com/quill-ui';
 import { getInitialLanguage, initializeI18n, TranslationProvider } from '@deriv-com/translations';
 
-import { clearTokens, exchangeCodeForToken } from 'Services/oauth';
+import { clearTokens } from 'Services/oauth';
 import WS from 'Services/ws-methods';
 
 import { FORM_ERROR_MESSAGES } from '../Constants/form-error-messages';
@@ -31,47 +31,19 @@ const App = ({ root_store }) => {
     const language = preferred_language ?? getInitialLanguage();
     const { isBridgeAvailable, sendBridgeEvent } = useMobileBridge();
 
-    // Handle OAuth2 callback — the auth server redirects back to / with ?code=...&state=...
-    // No separate /callback route needed; we handle it inline here on every mount.
+    // Handle OAuth2 callback is handled by initial logic in ClientStore.
+    // This effect can be simplified or removed as the redirect logic is now standard.
     React.useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const state = params.get('state');
-
-        const cleanURL = () => {
+        const cleanupURL = () => {
             const url = new URL(window.location.href);
-            url.searchParams.delete('code');
+            url.searchParams.delete('code'); // Just in case remnants exist
             url.searchParams.delete('state');
             window.history.replaceState({}, '', url.toString());
         };
 
-        if (!code) return; // Normal load — not an OAuth callback
-
-        // Validate CSRF token
-        const stored_csrf = sessionStorage.getItem('oauth_csrf_token');
-        if (!state || state !== stored_csrf) {
-            // eslint-disable-next-line no-console
-            console.error('[OAuth] CSRF token mismatch — aborting token exchange');
-            clearTokens();
-            cleanURL();
-            return;
+        if (window.location.search.includes('acct1')) {
+             cleanupURL();
         }
-
-        sessionStorage.removeItem('oauth_csrf_token');
-
-        exchangeCodeForToken(code)
-            .then(() => {
-                // Token is now in sessionStorage. Reload to /  so initStore
-                // picks it up on fresh boot — avoids the race where onClientInit
-                // already ran before the token exchange completed.
-                window.location.replace('/');
-            })
-            .catch(err => {
-                // eslint-disable-next-line no-console
-                console.error('[OAuth] Token exchange failed:', err);
-                cleanURL();
-            });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Send trading:ready event to ensure smooth loader transition

@@ -8,6 +8,7 @@ import {
     getTrustedDomainName,
     isCryptocurrency,
     LocalStore,
+    parseAccountInfo,
     removeCookies,
     routes,
     SessionStore,
@@ -17,7 +18,7 @@ import { getInitialLanguage, localize } from '@deriv-com/translations';
 
 import { requestRestLogout, WS } from 'Services';
 import { fetchAccounts, fetchOTP } from '../Services/accounts-api';
-import { clearTokens, generateOAuthURL, getStoredToken } from '../Services/oauth';
+import { clearTokens, generateOAuthURL, getStoredToken, storeTokens } from '../Services/oauth';
 
 import { getClientAccountType } from './Helpers/client';
 import { buildCurrenciesList } from './Modules/Trading/Helpers/currency';
@@ -323,35 +324,45 @@ export default class ClientStore extends BaseStore {
         const action_param = search_params?.get('action');
         const loginid_param = search_params?.get('loginid');
 
-        if (getStoredToken()) {
+        const accounts_from_url = parseAccountInfo(window.location.search);
+
+        if (accounts_from_url.length > 0) {
+            // Step 1: Store accounts from URL
+            localStorage.setItem('client_accounts', JSON.stringify(accounts_from_url));
+
+            // Step 2: Pick active account (default to acct1)
+            const active_account = accounts_from_url[0];
+            sessionStorage.setItem('active_loginid', active_account.account);
+            localStorage.setItem('active_loginid', active_account.account);
+
+            // Step 3: Store token in the format expected by the current oauth service
+            storeTokens(active_account.token);
+
+            // Clean up URL parameters after processing
+            const url = new URL(window.location.href);
+            const params_to_remove = [];
+            let j = 1;
+            while (url.searchParams.has(`acct${j}`)) {
+                params_to_remove.push(`acct${j}`, `token${j}`, `cur${j}`);
+                j++;
+            }
+            params_to_remove.forEach(p => url.searchParams.delete(p));
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+        }
+
+        const token = getStoredToken();
+        if (token) {
             // Set is_logging_in to true while we wait for authorization
             this.setIsLoggingIn(true);
 
-            // Step 5 of OAuth flow: fetch accounts → pick active account → get OTP WS URL.
-            // The OTP URL embeds auth — once the socket opens and subscribes to balance,
-            // socket-general.js calls authorizeAccount() which completes the login.
             try {
-                const accounts = await fetchAccounts();
-                const active_account =
-                    accounts.find(a => a.account_id === sessionStorage.getItem('active_loginid')) ||
-                    accounts.find(a => a.account_type === 'demo') ||
-                    accounts[0];
-
-                if (!active_account) throw new Error('No accounts found');
-
-                sessionStorage.setItem('active_loginid', active_account.account_id);
-                localStorage.setItem('active_loginid', active_account.account_id);
-
-                const ws_url = await fetchOTP(active_account.account_id);
-                BinarySocket.setWSUrl(ws_url);
-                BinarySocket.closeAndOpenNewConnection();
-
-                // Wait for balance response which serves as authorization.
-                // socket-general.js processes the balance response and calls authorizeAccount().
-                await BinarySocket.wait('balance');
+                // Authorize via WebSocket
+                const response = await WS.authorize(token);
+                this.responseAuthorize(response);
+                this.setIsAuthorize(true);
             } catch (error) {
                 // eslint-disable-next-line no-console
-                console.error('[Auth] Account init failed:', error);
+                console.error('[Auth] Authorization failed:', error);
                 clearTokens();
             }
         }

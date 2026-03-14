@@ -1,7 +1,7 @@
 {
     "name": "@deriv/core",
     "version": "0.1.0",
-    "description": "Deriv Core",
+    "description": "Expertdtrader Platform",
     "main": "index.js",
     "private": true,
     "scripts": {
@@ -14,20 +14,20 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/deriv-com/derivatives-trader.git"
+        "url": "https://Expertdtrader.vercel.app"
     },
     "keywords": [
-        "deriv"
+        "Expertdtrader"
     ],
-    "author": "Deriv",
+    "author": "Expertdtrader",
     "license": "Apache-2.0",
     "bugs": {
-        "url": "https://github.com/deriv-com/derivatives-trader/issues"
+        "url": "https://Expertdtrader.vercel.app/issues"
     },
     "engines": {
         "node": "20.x"
     },
-    "homepage": "https://github.com/deriv-com/derivatives-trader",
+    "homepage": "https://Expertdtrader.vercel.app",
     "devDependencies": {
         "@babel/eslint-parser": "^7.25.1",
         "@babel/plugin-transform-private-property-in-object": "^7.12.1",

@@ -1,4 +1,4 @@
-import { getAuthBaseUrl, getOAuthClientId, getOAuthRedirectUri, getSignupUrl } from '../brand';
+import { getAuthBaseUrl, getOAuthClientId, getOAuthRedirectUri, getOAuthUrl, getSignupUrl } from '../brand';
 
 // ---------------------------------------------------------------------------
 // PKCE helpers (duplicated here to avoid circular dependency with core)
@@ -36,33 +36,38 @@ const storePKCEVerifier = (verifier: string): void => {
 // ---------------------------------------------------------------------------
 
 /**
- * Redirects to the OAuth2 authorize endpoint using PKCE.
+ * Redirects to the OAuth2 authorize endpoint.
  * Uses window.location.replace() so the authorize URL does not appear
- * in browser history (prevents back-button returning to a broken state).
+ * in browser history.
  */
 export const redirectToLogin = async (_language?: string): Promise<void> => {
-    const verifier = generateCodeVerifier();
-    const challenge = await generateCodeChallenge(verifier);
-    storePKCEVerifier(verifier);
-
-    const csrf_token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
-    sessionStorage.setItem('oauth_csrf_token', csrf_token);
-
-    const params = new URLSearchParams({
-        response_type: 'code',
-        client_id: getOAuthClientId(),
-        redirect_uri: getOAuthRedirectUri(),
-        scope: 'trade',
-        state: csrf_token,
-        code_challenge: challenge,
-        code_challenge_method: 'S256',
-    });
-
-    const auth_url = `${getAuthBaseUrl()}/oauth2/auth?${params}`;
+    // Standard OAuth flow as requested in the instructions
+    const auth_url = getOAuthUrl();
     window.location.replace(auth_url);
 };
 
 export const redirectToSignUp = (_language?: string): void => {
     const signup_url = getSignupUrl();
     if (signup_url) window.open(signup_url, '_blank', 'noopener,noreferrer');
+};
+
+/**
+ * Parses the account information from the URL query parameters.
+ * Format: acct1=..., token1=..., cur1=...
+ */
+export const parseAccountInfo = (search: string) => {
+    const search_params = new URLSearchParams(search);
+    const accounts = [];
+    let i = 1;
+
+    while (search_params.has(`acct${i}`)) {
+        accounts.push({
+            account: search_params.get(`acct${i}`),
+            token: search_params.get(`token${i}`),
+            currency: search_params.get(`cur${i}`),
+        });
+        i++;
+    }
+
+    return accounts;
 };

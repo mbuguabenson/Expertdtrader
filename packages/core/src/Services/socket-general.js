@@ -53,6 +53,11 @@ const BinarySocketGeneral = (() => {
         handleError(response);
 
         switch (response.msg_type) {
+            case 'authorize':
+                if (response.authorize && response.authorize.loginid) {
+                    authorizeAccount(response);
+                }
+                break;
             case 'balance':
                 if (response.balance && response.balance.loginid) {
                     if (!client_store.is_authorize) {

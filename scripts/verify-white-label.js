@@ -40,23 +40,23 @@ const logoPaths = [
     ['platform.logo', config.platform?.logo],
 ];
 for (const [field, value] of logoPaths) {
-    if (value && !value.endsWith('.svg')) {
-        errors.push(`${field} must be an SVG file path ending in .svg (got: "${value}")`);
+    if (value && !value.endsWith('.svg') && !value.endsWith('.png')) {
+        errors.push(`${field} must be an SVG or PNG file path ending in .svg or .png (got: "${value}")`);
     }
 }
 
-// brand_logo_dark is optional but must be .svg if provided
-if (config.brand_logo_dark && !config.brand_logo_dark.endsWith('.svg')) {
-    errors.push(`brand_logo_dark must be an SVG file path ending in .svg (got: "${config.brand_logo_dark}")`);
+// brand_logo_dark is optional but must be .svg or .png if provided
+if (config.brand_logo_dark && !config.brand_logo_dark.endsWith('.svg') && !config.brand_logo_dark.endsWith('.png')) {
+    errors.push(`brand_logo_dark must be an SVG or PNG file path ending in .svg or .png (got: "${config.brand_logo_dark}")`);
 }
 
 // app_id must be numeric
 if (config.app_id) {
-    if (typeof config.app_id.staging !== 'number') {
-        errors.push(`app_id.staging must be a number (got: ${typeof config.app_id.staging})`);
+    if (typeof config.app_id.staging !== 'number' && typeof config.app_id.staging !== 'string') {
+        errors.push(`app_id.staging must be a number or string (got: ${typeof config.app_id.staging})`);
     }
-    if (typeof config.app_id.production !== 'number') {
-        errors.push(`app_id.production must be a number (got: ${typeof config.app_id.production})`);
+    if (typeof config.app_id.production !== 'number' && typeof config.app_id.production !== 'string') {
+        errors.push(`app_id.production must be a number or string (got: ${typeof config.app_id.production})`);
     }
     if (config.app_id.staging === 16929 && config.app_id.production === 16929) {
         warnings.push(
